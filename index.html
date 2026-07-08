@@ -82,7 +82,11 @@
                 <label>Tipo Riposo</label>
                 <select id="tipo_riposo"><option value="normale">Normale</option><option value="ridotto_9h">Ridotto (9h)</option></select>
                 <label>Note</label><textarea id="note"></textarea>
-                <button class="btn-save" onclick="salvaViaggio()">SALVA TRATTA</button>
+                
+                <div class="row" style="margin-top: 15px;">
+                    <div class="col"><button class="btn-save" id="btn-salva-tratta" onclick="salvaViaggio()" style="margin-top:0;">SALVA TRATTA</button></div>
+                    <div class="col" id="col-annulla-tratta" style="display: none;"><button type="button" style="background-color: var(--danger); color: white; margin-top:0;" onclick="resetFormViaggio()">ANNULLA</button></div>
+                </div>
             </div>
         </div>
 
@@ -137,6 +141,16 @@
                 <div class="tach-stat"><div class="tach-info"><span>Guida Settimanale</span><span id="txt-sett">0 / 56h</span></div><div class="progress-bar-bg"><div id="bar-sett" class="progress-bar-fill"></div></div></div>
                 <div class="tach-stat"><div class="tach-info"><span>Guida Bisettimanale</span><span id="txt-bisett">0 / 90h</span></div><div class="progress-bar-bg"><div id="bar-bisett" class="progress-bar-fill"></div></div></div>
             </div>
+
+            <div class="card">
+                <h3 style="font-size: 1.05em; color: var(--accent); margin-top: 0; margin-bottom: 5px;">⚙️ Allineamento Scheda</h3>
+                <p style="font-size: 0.8em; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.3;">Se hai iniziato a usare l'app a metà ciclo, inserisci qui le ore fatte la settimana scorsa (visibili sul tachigrafo) per sbloccare il conteggio corretto.</p>
+                <label>Ore settimana precedente (Ore:Minuti)</label>
+                <div class="row" style="align-items: center; margin-top: 4px;">
+                    <div class="col"><input type="time" id="calib_ore" value="00:00"></div>
+                    <div style="flex: 0 0 110px;"><button type="button" style="margin-top:0; padding: 11px; background-color: #0284c7; color: white; font-size: 0.9em;" onclick="salvaCalibrazione()">ALLINEA</button></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -145,10 +159,9 @@
         document.getElementById('data_v').valueAsDate = new Date(); 
         document.getElementById('data_r').valueAsDate = new Date();
 
-        // Variabile globale per tracciare la scheda attiva
         let currentTab = 0;
+        let editingTimestamp = null; // Memorizza la tratta che stiamo modificando
 
-        // Ascoltatore chilometri automatici
         document.getElementById('km_r').addEventListener('input', function() {
             let kmAttuali = parseFloat(this.value) || 0;
             let infoBox = document.getElementById('info-ultimo-km');
@@ -161,39 +174,18 @@
             }
         });
 
-        // --- SISTEMA DI LOGICA SWIPE ---
-        let touchstartX = 0;
-        let touchstartY = 0;
-        let touchendX = 0;
-        let touchendY = 0;
-
-        document.addEventListener('touchstart', function(e) {
-            touchstartX = e.changedTouches[0].screenX;
-            touchstartY = e.changedTouches[0].screenY;
-        }, {passive: true});
-
-        document.addEventListener('touchend', function(e) {
-            touchendX = e.changedTouches[0].screenX;
-            touchendY = e.changedTouches[0].screenY;
-            analizzaSwipe();
-        }, {passive: true});
+        // Gestione Swipe
+        let touchstartX = 0; let touchstartY = 0; let touchendX = 0; let touchendY = 0;
+        document.addEventListener('touchstart', function(e) { touchstartX = e.changedTouches[0].screenX; touchstartY = e.changedTouches[0].screenY; }, {passive: true});
+        document.addEventListener('touchend', function(e) { touchendX = e.changedTouches[0].screenX; touchendY = e.changedTouches[0].screenY; analizzaSwipe(); }, {passive: true});
 
         function analizzaSwipe() {
-            let diffX = touchendX - touchstartX;
-            let diffY = touchendY - touchstartY;
-
-            // Lo swipe deve essere prevalentemente orizzontale e lungo almeno 60 pixel
+            let diffX = touchendX - touchstartX; let diffY = touchendY - touchstartY;
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-                if (diffX > 0) {
-                    // Trascina verso DESTRA -> vai a SINISTRA (scheda precedente)
-                    if (currentTab > 0) cambiaTab(currentTab - 1);
-                } else {
-                    // Trascina verso SINISTRA -> vai a DESTRA (scheda successiva)
-                    if (currentTab < 3) cambiaTab(currentTab + 1);
-                }
+                if (diffX > 0) { if (currentTab > 0) cambiaTab(currentTab - 1); } 
+                else { if (currentTab < 3) cambiaTab(currentTab + 1); }
             }
         }
-        // -------------------------------
 
         function toggleMenu() { 
             const menu = document.getElementById('dropdown-menu');
@@ -208,14 +200,12 @@
         window.onclick = function(event) {
             if (!event.target.matches('.menu-icon')) {
                 const dropdown = document.getElementById('dropdown-menu');
-                if (dropdown && dropdown.style.display === 'block') {
-                    dropdown.style.display = 'none';
-                }
+                if (dropdown && dropdown.style.display === 'block') dropdown.style.display = 'none';
             }
         }
 
         function cambiaTab(i) {
-            currentTab = i; // Aggiorna l'indice corrente
+            currentTab = i;
             document.querySelectorAll('.tab-content').forEach((t, index) => t.classList.toggle('active', index === i));
             document.querySelectorAll('.nav div').forEach((n, index) => n.classList.toggle('active', index === i));
             if(i === 1) mostraUltimoKm(); 
@@ -255,9 +245,7 @@
         function aggiungiTappaField(valore = '') {
             const container = document.getElementById('tappe-container');
             const div = document.createElement('div');
-            div.className = 'row';
-            div.style.marginTop = '8px';
-            div.style.alignItems = 'center';
+            div.className = 'row'; div.style.marginTop = '8px'; div.style.alignItems = 'center';
             div.innerHTML = `
                 <div class="col"><input type="text" class="tappa-input" placeholder="Cliente / Carico-Scarico Intermedio" value="${valore}"></div>
                 <div style="flex: 0 0 45px;"><button type="button" style="background-color: var(--danger); color: white; padding: 10px; margin-top: 4px; border-radius: 6px; width: 100%;" onclick="this.parentElement.parentElement.remove()">❌</button></div>
@@ -266,63 +254,106 @@
         }
 
         function resetFormViaggio() {
-            document.getElementById('partenza').value = '';
-            document.getElementById('arrivo').value = '';
-            document.getElementById('tappe-container').innerHTML = ''; 
-            document.getElementById('km_p').value = '';
-            document.getElementById('km_a').value = '';
-            document.getElementById('h_guida').value = '00:00';
-            document.getElementById('trasferta').value = '';
-            document.getElementById('note').value = '';
+            document.getElementById('partenza').value = ''; document.getElementById('arrivo').value = '';
+            document.getElementById('tappe-container').innerHTML = ''; document.getElementById('km_p').value = '';
+            document.getElementById('km_a').value = ''; document.getElementById('h_guida').value = '00:00';
+            document.getElementById('trasferta').value = ''; document.getElementById('note').value = '';
             document.getElementById('data_v').valueAsDate = new Date();
+            
+            // Ripristina lo stato iniziale dei pulsanti
+            editingTimestamp = null;
+            document.getElementById('btn-salva-tratta').innerText = "SALVA TRATTA";
+            document.getElementById('col-annulla-tratta').style.display = "none";
         }
 
         function salvaViaggio() {
             let tappeInputs = document.querySelectorAll('.tappa-input');
             let tappeElenco = [];
-            tappeInputs.forEach(input => {
-                if(input.value.trim() !== '') tappeElenco.push(input.value.trim());
-            });
+            tappeInputs.forEach(input => { if(input.value.trim() !== '') tappeElenco.push(input.value.trim()); });
 
-            let v = { 
-                tipo: 'viaggio', 
-                data: document.getElementById('data_v').value, 
-                p: document.getElementById('partenza').value, 
-                a: document.getElementById('arrivo').value, 
-                tappe: tappeElenco, 
-                km_p: parseFloat(document.getElementById('km_p').value)||0, 
-                km_a: parseFloat(document.getElementById('km_a').value)||0, 
-                h_guida: document.getElementById('h_guida').value || "00:00", 
-                trasf: parseFloat(document.getElementById('trasferta').value)||0, 
-                timestamp: Date.now() 
-            };
-            if(!v.data) { alert("Inserisci una data valida!"); return; }
+            let dataViaggio = document.getElementById('data_v').value;
+            if(!dataViaggio) { alert("Inserisci una data valida!"); return; }
             
-            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; 
-            dati.push(v);
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+
+            if (editingTimestamp !== null) {
+                // MODALITÀ MODIFICA: Cerca e aggiorna la tratta esistente
+                let index = dati.findIndex(d => d.timestamp === editingTimestamp);
+                if (index !== -1) {
+                    dati[index].data = dataViaggio;
+                    dati[index].p = document.getElementById('partenza').value;
+                    dati[index].a = document.getElementById('arrivo').value;
+                    dati[index].tappe = tappeElenco;
+                    dati[index].km_p = parseFloat(document.getElementById('km_p').value)||0;
+                    dati[index].km_a = parseFloat(document.getElementById('km_a').value)||0;
+                    dati[index].h_guida = document.getElementById('h_guida').value || "00:00";
+                    dati[index].trasf = parseFloat(document.getElementById('trasferta').value)||0;
+                    dati[index].note = document.getElementById('note').value || "";
+                    alert("Tratta aggiornata con successo!");
+                }
+            } else {
+                // MODALITÀ NUOVA TRATTA
+                let v = { 
+                    tipo: 'viaggio', data: dataViaggio, 
+                    p: document.getElementById('partenza').value, a: document.getElementById('arrivo').value, 
+                    tappe: tappeElenco, km_p: parseFloat(document.getElementById('km_p').value)||0, 
+                    km_a: parseFloat(document.getElementById('km_a').value)||0, 
+                    h_guida: document.getElementById('h_guida').value || "00:00", 
+                    trasf: parseFloat(document.getElementById('trasferta').value)||0, 
+                    note: document.getElementById('note').value || "",
+                    timestamp: Date.now() 
+                };
+                dati.push(v);
+                alert("Tratta salvata!");
+            }
+            
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
-            
-            alert("Tratta salvata!");
             resetFormViaggio();
+            cambiaTab(2); // Torna direttamente al registro per vedere le modifiche
+        }
+
+        function caricaTrattaPerModifica(timestamp) {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let viaggio = dati.find(d => d.timestamp === timestamp);
+            if (!viaggio) return;
+
+            editingTimestamp = timestamp;
+
+            // Compila i campi del modulo
+            document.getElementById('data_v').value = viaggio.data;
+            document.getElementById('partenza').value = viaggio.p;
+            document.getElementById('arrivo').value = viaggio.a;
+            document.getElementById('km_p').value = viaggio.km_p || '';
+            document.getElementById('km_a').value = viaggio.km_a || '';
+            document.getElementById('h_guida').value = viaggio.h_guida || '00:00';
+            document.getElementById('trasferta').value = viaggio.trasf || '';
+            document.getElementById('note').value = viaggio.note || '';
+
+            // Rigenera i campi dinamici delle tappe intermedie
+            const container = document.getElementById('tappe-container');
+            container.innerHTML = '';
+            if (viaggio.tappe && viaggio.tappe.length > 0) {
+                viaggio.tappe.forEach(tappa => aggiungiTappaField(tappa));
+            }
+
+            // Cambia grafica per la modalità modifica
+            document.getElementById('btn-salva-tratta').innerText = "AGGIORNA TRATTA";
+            document.getElementById('col-annulla-tratta').style.display = "block";
+            
+            cambiaTab(0); // Sposta l'utente sulla schermata di inserimento dati
         }
 
         function salvaRifornimento() {
             let r = { 
-                tipo: 'rifornimento', 
-                data: document.getElementById('data_r').value, 
-                l: parseFloat(document.getElementById('litri').value)||0, 
-                km: parseFloat(document.getElementById('km_r').value)||0, 
-                prezzo: parseFloat(document.getElementById('prezzo').value)||0,
-                timestamp: Date.now() 
+                tipo: 'rifornimento', data: document.getElementById('data_r').value, 
+                l: parseFloat(document.getElementById('litri').value)||0, km: parseFloat(document.getElementById('km_r').value)||0, 
+                prezzo: parseFloat(document.getElementById('prezzo').value)||0, timestamp: Date.now() 
             };
             if(!r.data) { alert("Inserisci una data valida!"); return; }
             
-            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; 
-            dati.push(r);
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(r);
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
-            
-            alert("Rifornimento salvato!");
-            mostraUltimoKm(); 
+            alert("Rifornimento salvato!"); mostraUltimoKm(); 
         }
 
         function popolaAnni() {
@@ -342,12 +373,10 @@
                 let [anno, mese] = d.data.split('-'); 
                 return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel); 
             });
-            
             filtered.sort((a,b) => b.timestamp - a.timestamp);
             
             let tratte = filtered.filter(d => d.tipo === 'viaggio');
             let rifornimenti = filtered.filter(d => d.tipo === 'rifornimento');
-            
             tratte.forEach(d => { tot += (d.trasf || 0); });
             document.getElementById('totale-trasferte-box').innerText = `Totale Trasferte: € ${tot.toFixed(2)}`;
             
@@ -356,22 +385,22 @@
             } else {
                 document.getElementById('lista-viaggi').innerHTML = tratte.map(d => {
                     let percorso = `<b>${d.p}</b>`;
-                    if (d.tappe && d.tappe.length > 0) {
-                        percorso += ` ➔ <span style="color: var(--text-muted); font-size: 0.9em; font-weight: 500;">[${d.tappe.join(' ➔ ')}]</span>`;
-                    }
+                    if (d.tappe && d.tappe.length > 0) percorso += ` ➔ <span style="color: var(--text-muted); font-size: 0.9em; font-weight: 500;">[${d.tappe.join(' ➔ ')}]</span>`;
                     percorso += ` ➔ <b>${d.a}</b>`;
                     
                     let oreVisualizza = d.h_guida;
                     if (typeof oreVisualizza === 'string' && oreVisualizza.includes(':')) {
-                        let [hh, mm] = oreVisualizza.split(':');
-                        oreVisualizza = `${parseInt(hh, 10)}h ${mm}m`;
+                        let [hh, mm] = oreVisualizza.split(':'); oreVisualizza = `${parseInt(hh, 10)}h ${mm}m`;
                     } else {
-                        let h = Math.floor(oreVisualizza || 0);
-                        let m = Math.round(((oreVisualizza || 0) - h) * 60);
+                        let h = Math.floor(oreVisualizza || 0); let m = Math.round(((oreVisualizza || 0) - h) * 60);
                         oreVisualizza = `${h}h ${m.toString().padStart(2, '0')}m`;
                     }
                     
-                    return `<div class="entry"><b>${d.data}</b>: ${percorso} | Guida: ${oreVisualizza} | <b>€${d.trasf}</b></div>`;
+                    return `
+                    <div class="entry" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div style="flex: 1;"><b>${d.data}</b>: ${percorso} | Guida: ${oreVisualizza} | <b>€${d.trasf}</b></div>
+                        <button type="button" onclick="caricaTrattaPerModifica(${d.timestamp})" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 0.85em; background-color: #0284c7; color: white; border-radius: 4px;">✏️</button>
+                    </div>`;
                 }).join('');
             }
             
@@ -390,35 +419,33 @@
         }
 
         function getMonday(d) {
-            const date = new Date(d);
-            const day = date.getDay();
+            const date = new Date(d); const day = date.getDay();
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(date.setDate(diff));
-            monday.setHours(0, 0, 0, 0);
+            const monday = new Date(date.setDate(diff)); monday.setHours(0, 0, 0, 0);
             return monday;
         }
 
         function timeToDecimal(t) {
             if (!t) return 0;
             if (typeof t === 'number') return t;
-            let [h, m] = t.split(':').map(Number);
-            return h + (m / 60);
+            let [h, m] = t.split(':').map(Number); return h + (m / 60);
         }
 
         function formattaTotaleTachigrafo(dec) {
-            let h = Math.floor(dec);
-            let m = Math.round((dec - h) * 60);
+            let h = Math.floor(dec); let m = Math.round((dec - h) * 60);
             return `${h}h ${m.toString().padStart(2, '0')}m`;
         }
 
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let calibrazioneStr = localStorage.getItem('logiroad_calib_prec') || "00:00";
+            document.getElementById('calib_ore').value = calibrazioneStr;
+            let calibDec = timeToDecimal(calibrazioneStr);
+
             let oggi = new Date();
             let lunediCorrente = getMonday(oggi);
-            let lunediPrecedente = new Date(lunediCorrente);
-            lunediPrecedente.setDate(lunediPrecedente.getDate() - 7);
-            let prossimoLunedi = new Date(lunediCorrente);
-            prossimoLunedi.setDate(prossimoLunedi.getDate() + 7);
+            let lunediPrecedente = new Date(lunediCorrente); lunediPrecedente.setDate(lunediPrecedente.getDate() - 7);
+            let prossimoLunedi = new Date(lunediCorrente); prossimoLunedi.setDate(prossimoLunedi.getDate() + 7);
             
             let hSett = 0; let hBiSett = 0;
             
@@ -431,15 +458,25 @@
                 }
             });
             
+            hBiSett += calibDec;
+            
             document.getElementById('txt-sett').innerText = `${formattaTotaleTachigrafo(hSett)} / 56h`;
             document.getElementById('txt-bisett').innerText = `${formattaTotaleTachigrafo(hBiSett)} / 90h`;
             document.getElementById('bar-sett').style.width = Math.min(100, (hSett/56)*100) + "%";
             document.getElementById('bar-bisett').style.width = Math.min(100, (hBiSett/90)*100) + "%";
         }
 
+        function salvaCalibrazione() {
+            let val = document.getElementById('calib_ore').value || "00:00";
+            localStorage.setItem('logiroad_calib_prec', val);
+            calcolaTachigrafo();
+            alert("Tachigrafo allineato correttamente con i dati della scheda!");
+        }
+
         function pulisciTutto() { 
             if(confirm("Sei sicuro di voler cancellare definitivamente tutto il registro?")) { 
-                localStorage.removeItem('logiroad_dati'); 
+                localStorage.removeItem('logiroad_dati'); localStorage.removeItem('logiroad_calib_prec');
+                resetFormViaggio();
                 aggiornaRegistro(); 
             } 
         }
@@ -449,8 +486,7 @@
             let csv = "\uFEFFTipo;Data;Dettagli;Valore (€)\r\n" + dati.map(d => {
                 let info = '';
                 if (d.tipo === 'viaggio') {
-                    info = d.p;
-                    if (d.tappe && d.tappe.length > 0) info += ` -> (${d.tappe.join(' -> ')})`;
+                    info = d.p; if (d.tappe && d.tappe.length > 0) info += ` -> (${d.tappe.join(' -> ')})`;
                     info += ` -> ${d.a}`;
                 } else { info = `${d.l}L`; }
                 let val = d.tipo === 'viaggio' ? (d.trasf || 0) : (d.prezzo || '');
@@ -458,10 +494,7 @@
             }).join('\r\n');
             
             let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = 'registro_logiroad.csv'; 
-            a.click();
+            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'registro_logiroad.csv'; a.click();
         }
     </script>
 </body>
