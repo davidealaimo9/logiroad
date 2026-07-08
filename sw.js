@@ -1,4 +1,4 @@
-const CACHE_NAME = 'logiroad-v2.1'; // <--- Ricordati di aumentare questo (v3, v4...) al prossimo cambio
+const CACHE_NAME = 'logiroad-v2.2'; // <--- Ricordati di aumentare questo (v3, v4...) al prossimo cambio
 
 // Elenco dei file da salvare per l'offline
 const ASSETS = [
