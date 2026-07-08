@@ -33,7 +33,7 @@
         .progress-bar-bg { background: #e2e8f0; height: 12px; border-radius: 10px; overflow: hidden; }
         .progress-bar-fill { height: 100%; background: #0284c7; width: 0%; transition: width 0.5s; }
         .entry { border-bottom: 1px solid var(--border); padding: 12px 0; font-size: 0.9em; }
-        .totale-box { background: var(--accent); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+        .totale-box { color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -60,9 +60,22 @@
             <div class="card">
                 <h2>Nuova Tratta</h2>
                 <label>Data</label><input type="date" id="data_v">
-                <div class="row"><div class="col"><label>Partenza</label><input type="text" id="partenza"></div><div class="col"><label>Arrivo</label><input type="text" id="arrivo"></div></div>
-                <div class="row"><div class="col"><label>Km Inizio</label><input type="number" id="km_p"></div><div class="col"><label>Km Fine</label><input type="number" id="km_a"></div></div>
-                <div class="row"><div class="col"><label>Ore Guida</label><input type="number" id="h_guida" step="0.5"></div><div class="col"><label>Trasferta (€)</label><input type="number" id="trasferta"></div></div>
+                <div class="row">
+                    <div class="col"><label>Partenza</label><input type="text" id="partenza"></div>
+                    <div class="col"><label>Arrivo</label><input type="text" id="arrivo"></div>
+                </div>
+                <div class="row">
+                    <div class="col"><label>Ora Partenza</label><input type="time" id="ora_p"></div>
+                    <div class="col"><label>Ora Arrivo</label><input type="time" id="ora_a"></div>
+                </div>
+                <div class="row">
+                    <div class="col"><label>Km Inizio</label><input type="number" id="km_p"></div>
+                    <div class="col"><label>Km Fine</label><input type="number" id="km_a"></div>
+                </div>
+                <div class="row">
+                    <div class="col"><label>Ore Guida</label><input type="number" id="h_guida" step="0.5"></div>
+                    <div class="col"><label>Trasferta (€)</label><input type="number" id="trasferta"></div>
+                </div>
                 <label>Tipo Riposo</label>
                 <select id="tipo_riposo"><option value="normale">Normale</option><option value="ridotto_9h">Ridotto (9h)</option></select>
                 <label>Note</label><textarea id="note"></textarea>
@@ -76,7 +89,10 @@
                 <h2>Rifornimento</h2>
                 <label>Data</label><input type="date" id="data_r">
                 <label>Km attuali</label><input type="number" id="km_r">
-                <div class="row"><div class="col"><label>Litri</label><input type="number" id="litri" step="0.1"></div><div class="col"><label>Prezzo (€)</label><input type="number" id="prezzo" step="0.01"></div></div>
+                <div class="row">
+                    <div class="col"><label>Litri</label><input type="number" id="litri" step="0.1"></div>
+                    <div class="col"><label>Spesa Totale Gasolio (€)</label><input type="number" id="prezzo" step="0.01"></div>
+                </div>
                 
                 <h3 style="font-size:0.9em; margin-top:20px;">Calcolatore Consumi</h3>
                 <label>Km percorsi (ultimo pieno)</label><input type="number" id="km_calc">
@@ -90,9 +106,15 @@
         <!-- REGISTRO -->
         <div id="tab-2" class="tab-content">
             <div class="card">
-                <h2>Storico e Trasferte</h2>
-                <div class="row"><div class="col"><select id="filter-mese" onchange="aggiornaRegistro()"><option value="all">Tutti i mesi</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></div><div class="col"><select id="filter-anno" onchange="aggiornaRegistro()"><option value="all">Tutti gli anni</option></select></div></div>
-                <div id="totale-trasferte-box" class="totale-box">Totale: € 0.00</div>
+                <h2>Storico e Statistiche Mensili</h2>
+                <div class="row" style="margin-bottom: 10px;">
+                    <div class="col"><select id="filter-mese" onchange="aggiornaRegistro()"><option value="all">Tutti i mesi</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></div>
+                    <div class="col"><select id="filter-anno" onchange="aggiornaRegistro()"><option value="all">Tutti gli anni</option></select></div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; gap: 10px;">
+                    <div class="col"><div id="totale-trasferte-box" class="totale-box" style="background:#0284c7;">Trasferte: € 0.00</div></div>
+                    <div class="col"><div id="totale-gasolio-box" class="totale-box" style="background:#f59e0b;">Gasolio: € 0.00</div></div>
+                </div>
                 <div id="lista-viaggi"></div>
                 <button style="background:var(--danger); color:white;" onclick="pulisciTutto()">Cancella Tutto</button>
             </div>
@@ -101,9 +123,18 @@
         <!-- TACHIGRAFO -->
         <div id="tab-3" class="tab-content">
             <div class="card">
-                <h2>Grafici Guida</h2>
-                <div class="tach-stat"><div class="tach-info"><span>Guida Settimanale</span><span id="txt-sett">0 / 56h</span></div><div class="progress-bar-bg"><div id="bar-sett" class="progress-bar-fill"></div></div></div>
-                <div class="tach-stat"><div class="tach-info"><span>Guida Bisettimanale</span><span id="txt-bisett">0 / 90h</span></div><div class="progress-bar-bg"><div id="bar-bisett" class="progress-bar-fill"></div></div></div>
+                <h2>Controllo Tempi Guida (Settimane Fisse Lun-Dom)</h2>
+                <div class="tach-stat">
+                    <div class="tach-info"><span>Guida Settimana Corrente</span><span id="txt-sett">0 / 56h</span></div>
+                    <div class="progress-bar-bg"><div id="bar-sett" class="progress-bar-fill"></div></div>
+                </div>
+                <div class="tach-stat">
+                    <div class="tach-info"><span>Guida Bisettimanale (Corrente + Prec.)</span><span id="txt-bisett">0 / 90h</span></div>
+                    <div class="progress-bar-bg"><div id="bar-bisett" class="progress-bar-fill" style="background:#f59e0b;"></div></div>
+                </div>
+                <p style="font-size: 0.8em; color: var(--text-muted); line-height: 1.4;">
+                    *Nota: I contatori si azzerano e ricalcolano automaticamente ogni Lunedì alle ore 00:00 seguendo i cicli reali del cronotachigrafo europeo.
+                </p>
             </div>
         </div>
     </div>
@@ -134,17 +165,42 @@
         }
 
         function salvaViaggio() {
-            let v = { tipo: 'viaggio', data: document.getElementById('data_v').value, p: document.getElementById('partenza').value, a: document.getElementById('arrivo').value, km_p: parseFloat(document.getElementById('km_p').value)||0, km_a: parseFloat(document.getElementById('km_a').value)||0, h_guida: parseFloat(document.getElementById('h_guida').value)||0, trasf: parseFloat(document.getElementById('trasferta').value)||0, timestamp: Date.now() };
+            let v = { 
+                tipo: 'viaggio', 
+                data: document.getElementById('data_v').value, 
+                ora_p: document.getElementById('ora_p').value || '--:--',
+                ora_a: document.getElementById('ora_a').value || '--:--',
+                p: document.getElementById('partenza').value, 
+                a: document.getElementById('arrivo').value, 
+                km_p: parseFloat(document.getElementById('km_p').value)||0, 
+                km_a: parseFloat(document.getElementById('km_a').value)||0, 
+                h_guida: parseFloat(document.getElementById('h_guida').value)||0, 
+                trasf: parseFloat(document.getElementById('trasferta').value)||0, 
+                timestamp: Date.now() 
+            };
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(v);
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
             alert("Tratta salvata!");
+            // Svuota i campi inseriti tranne la data
+            document.getElementById('partenza').value = ''; document.getElementById('arrivo').value = '';
+            document.getElementById('ora_p').value = ''; document.getElementById('ora_a').value = '';
+            document.getElementById('km_p').value = ''; document.getElementById('km_a').value = '';
+            document.getElementById('h_guida').value = ''; document.getElementById('trasferta').value = '';
         }
 
         function salvaRifornimento() {
-            let r = { tipo: 'rifornimento', data: document.getElementById('data_r').value, l: document.getElementById('litri').value, km: document.getElementById('km_r').value, timestamp: Date.now() };
+            let r = { 
+                tipo: 'rifornimento', 
+                data: document.getElementById('data_r').value, 
+                l: parseFloat(document.getElementById('litri').value)||0, 
+                prezzo: parseFloat(document.getElementById('prezzo').value)||0, 
+                km: document.getElementById('km_r').value, 
+                timestamp: Date.now() 
+            };
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(r);
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
             alert("Rifornimento salvato!");
+            document.getElementById('litri').value = ''; document.getElementById('prezzo').value = ''; document.getElementById('km_r').value = ''; document.getElementById('km_calc').value = ''; document.getElementById('box-calc').style.display = 'none';
         }
 
         function popolaAnni() {
@@ -157,35 +213,94 @@
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             let mSel = document.getElementById('filter-mese').value;
             let aSel = document.getElementById('filter-anno').value;
-            let tot = 0;
-            let filtered = dati.filter(d => { let [anno, mese] = d.data.split('-'); return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel); });
+            let totTrasf = 0;
+            let totGasolio = 0;
+            
+            let filtered = dati.filter(d => { 
+                if (!d.data) return false;
+                let [anno, mese] = d.data.split('-'); 
+                return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel); 
+            });
+            
             filtered.sort((a,b) => b.timestamp - a.timestamp);
-            filtered.forEach(d => { if(d.tipo === 'viaggio') tot += (d.trasf || 0); });
-            document.getElementById('totale-trasferte-box').innerText = `Totale: € ${tot.toFixed(2)}`;
+            
+            filtered.forEach(d => { 
+                if(d.tipo === 'viaggio') totTrasf += (d.trasf || 0); 
+                if(d.tipo === 'rifornimento') totGasolio += (d.prezzo || 0);
+            });
+            
+            document.getElementById('totale-trasferte-box').innerText = `Trasferte: € ${totTrasf.toFixed(2)}`;
+            document.getElementById('totale-gasolio-box').innerText = `Gasolio: € ${totGasolio.toFixed(2)}`;
+            
             document.getElementById('lista-viaggi').innerHTML = filtered.map(d => 
-                d.tipo === 'viaggio' ? `<div class="entry"><b>${d.data}</b>: ${d.p} ➔ ${d.a} | <b>€${d.trasf}</b></div>` : 
-                `<div class="entry"><b>${d.data}</b>: Rifornimento ${d.l}L</div>`
+                d.tipo === 'viaggio' ? 
+                `<div class="entry"><b>${d.data}</b> <span style="color:var(--accent)">(${d.ora_p} ➔ ${d.ora_a})</span>:<br>${d.p} ➔ ${d.a} | Guida: ${d.h_guida}h | <b>€${d.trasf}</b></div>` : 
+                `<div class="entry" style="border-left: 4px solid #f59e0b; padding-left: 8px;"><b>${d.data}</b>: Rifornimento ${d.l}L | Spesa: <b>€${d.prezzo.toFixed(2)}</b></div>`
             ).join('');
+        }
+
+        // Funzione helper per calcolare il lunedì di inizio di una data
+        function ottieniLunedi(dataBase) {
+            let d = new Date(dataBase);
+            let day = d.getDay();
+            let diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            let lunedi = new Date(d.setDate(diff));
+            lunedi.setHours(0,0,0,0);
+            return lunedi;
         }
 
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
-            let ora = Date.now();
-            let v7 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 7*24*60*60*1000));
-            let v14 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 14*24*60*60*1000));
-            let h7 = v7.reduce((a,b) => a + b.h_guida, 0);
-            let h14 = v14.reduce((a,b) => a + b.h_guida, 0);
-            document.getElementById('txt-sett').innerText = `${h7}h / 56h`;
-            document.getElementById('txt-bisett').innerText = `${h14}h / 90h`;
-            document.getElementById('bar-sett').style.width = Math.min(100, (h7/56)*100) + "%";
-            document.getElementById('bar-bisett').style.width = Math.min(100, (h14/90)*100) + "%";
+            
+            let oggi = new Date();
+            let lunediCorrente = ottieniLunedi(oggi);
+            let lunediPrecedente = new Date(lunediCorrente.getTime() - 7 * 24 * 60 * 60 * 1000);
+            let fineDomenicaCorrente = new Date(lunediCorrente.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            let hSettimanaCorrente = 0;
+            let hSettimanaPrecedente = 0;
+
+            dati.forEach(d => {
+                if (d.tipo === 'viaggio' && d.data) {
+                    let dataElemento = new Date(d.data + "T00:00:00");
+                    let t = dataElemento.getTime();
+
+                    // Controlla se appartiene alla settimana fissa corrente (Lun-Dom attuale)
+                    if (t >= lunediCorrente.getTime() && t < fineDomenicaCorrente.getTime()) {
+                        hSettimanaCorrente += d.h_guida;
+                    }
+                    // Controlla se appartiene alla settimana fissa precedente
+                    if (t >= lunediPrecedente.getTime() && t < lunediCorrente.getTime()) {
+                        hSettimanaPrecedente += d.h_guida;
+                    }
+                }
+            });
+
+            let hBisettimanale = hSettimanaCorrente + hSettimanaPrecedente;
+
+            document.getElementById('txt-sett').innerText = `${hSettimanaCorrente}h / 56h`;
+            document.getElementById('txt-bisett').innerText = `${hBisettimanale}h / 90h`;
+            
+            document.getElementById('bar-sett').style.width = Math.min(100, (hSettimanaCorrente / 56) * 100) + "%";
+            document.getElementById('bar-bisett').style.width = Math.min(100, (hBisettimanale / 90) * 100) + "%";
+
+            // Cambia colore alle barre in caso di sforamento orari
+            document.getElementById('bar-sett').style.backgroundColor = hSettimanaCorrente > 56 ? 'var(--danger)' : '#0284c7';
+            document.getElementById('bar-bisett').style.backgroundColor = hBisettimanale > 90 ? 'var(--danger)' : '#f59e0b';
         }
 
-        function pulisciTutto() { if(confirm("Cancella tutto?")) { localStorage.removeItem('logiroad_dati'); aggiornaRegistro(); } }
+        function pulisciTutto() { if(confirm("Sei sicuro di voler cancellare interamente il registro storico?")) { localStorage.removeItem('logiroad_dati'); aggiornaRegistro(); } }
+        
         function esportaExcel() { 
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
-            let csv = "Tipo;Data;Info;Valore\r\n" + dati.map(d => `${d.tipo};${d.data};${d.tipo==='viaggio'?d.p+'-'+d.a:d.l+'L'};${d.trasf||0}`).join('\r\n');
-            let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = 'registro.csv'; a.click();
+            let csv = "Tipo;Data;Ora Partenza;Ora Arrivo;Info Percorso/Litri;Valore/Spesa (€)\r\n" + dati.map(d => {
+                if(d.tipo === 'viaggio') {
+                    return `Tratta;${d.data};${d.ora_p};${d.ora_a};${d.p} - ${d.a};${d.trasf}`;
+                } else {
+                    return `Rifornimento;${d.data};;;${d.l} Litri;${d.prezzo}`;
+                }
+            }).join('\r\n');
+            let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = 'registro_logiroad.csv'; a.click();
         }
     </script>
 </body>
