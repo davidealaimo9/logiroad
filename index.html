@@ -36,26 +36,11 @@
         .totale-box { background: var(--accent); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
         .btn-add-tappa { background-color: transparent; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; font-size: 0.85em; margin-top: 8px; width: auto; display: inline-block; }
 
-        /* REGOLA SPECIALE DI STAMPA: Nasconde i componenti di interfaccia inutili sul PDF */
         @media print {
-            .dropdown, .menu-icon, .nav, button, .btn-add-tappa { 
-                display: none !important; 
-            }
-            body { 
-                background: white !important; 
-                color: black !important; 
-            }
-            .card { 
-                box-shadow: none !important; 
-                padding: 0 !important; 
-                margin-bottom: 0 !important; 
-            }
-            .header-wrapper {
-                background-color: #0f172a !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+            .dropdown, .menu-icon, .nav, button, .btn-add-tappa { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .card { box-shadow: none !important; padding: 0 !important; margin-bottom: 0 !important; }
+            .header-wrapper { background-color: #0f172a !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -78,7 +63,6 @@
     </div>
 
     <div class="container">
-        <!-- TRATTA -->
         <div id="tab-0" class="tab-content active">
             <div class="card">
                 <h2>Nuova Tratta</h2>
@@ -93,7 +77,7 @@
                 <button type="button" class="btn-add-tappa" onclick="aggiungiTappaField()">➕ Aggiungi Tappa Intermedia</button>
                 
                 <div class="row"><div class="col"><label>Km Inizio</label><input type="number" id="km_p"></div><div class="col"><label>Km Fine</label><input type="number" id="km_a"></div></div>
-                <div class="row"><div class="col"><label>Ore Guida</label><input type="number" id="h_guida" step="0.5"></div><div class="col"><label>Trasferta (€)</label><input type="number" id="trasferta"></div></div>
+                <div class="row"><div class="col"><label>Ore Guida (Ore:Minuti)</label><input type="time" id="h_guida" value="00:00"></div><div class="col"><label>Trasferta (€)</label><input type="number" id="trasferta"></div></div>
                 <label>Tipo Riposo</label>
                 <select id="tipo_riposo"><option value="normale">Normale</option><option value="ridotto_9h">Ridotto (9h)</option></select>
                 <label>Note</label><textarea id="note"></textarea>
@@ -101,7 +85,6 @@
             </div>
         </div>
 
-        <!-- RIFORNIMENTO -->
         <div id="tab-1" class="tab-content">
             <div class="card">
                 <h2>Rifornimento</h2>
@@ -118,33 +101,12 @@
             </div>
         </div>
 
-        <!-- REGISTRO -->
         <div id="tab-2" class="tab-content">
             <div class="card">
                 <h2>Storico e Trasferte</h2>
                 <div class="row">
-                    <div class="col">
-                        <select id="filter-mese" onchange="aggiornaRegistro()">
-                            <option value="all">Tutti i mesi</option>
-                            <option value="01">Gennaio</option>
-                            <option value="02">Febbraio</option>
-                            <option value="03">Marzo</option>
-                            <option value="04">Aprile</option>
-                            <option value="05">Maggio</option>
-                            <option value="06">Giugno</option>
-                            <option value="07">Luglio</option>
-                            <option value="08">Agosto</option>
-                            <option value="09">Settembre</option>
-                            <option value="10">Ottobre</option>
-                            <option value="11">Novembre</option>
-                            <option value="12">Dicembre</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <select id="filter-anno" onchange="aggiornaRegistro()">
-                            <option value="all">Tutti gli anni</option>
-                        </select>
-                    </div>
+                    <div class="col"><select id="filter-mese" onchange="aggiornaRegistro()"><option value="all">Tutti i mesi</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></div>
+                    <div class="col"><select id="filter-anno" onchange="aggiornaRegistro()"><option value="all">Tutti gli anni</option></select></div>
                 </div>
                 
                 <div id="totale-trasferte-box" class="totale-box">Totale: € 0.00</div>
@@ -159,7 +121,6 @@
             </div>
         </div>
 
-        <!-- TACHIGRAFO -->
         <div id="tab-3" class="tab-content">
             <div class="card">
                 <h2>Grafici Guida</h2>
@@ -234,7 +195,7 @@
             document.getElementById('tappe-container').innerHTML = ''; 
             document.getElementById('km_p').value = '';
             document.getElementById('km_a').value = '';
-            document.getElementById('h_guida').value = '';
+            document.getElementById('h_guida').value = '00:00'; // Reset a mezzanotte/zero ore
             document.getElementById('trasferta').value = '';
             document.getElementById('note').value = '';
             document.getElementById('data_v').valueAsDate = new Date();
@@ -255,7 +216,7 @@
                 tappe: tappeElenco, 
                 km_p: parseFloat(document.getElementById('km_p').value)||0, 
                 km_a: parseFloat(document.getElementById('km_a').value)||0, 
-                h_guida: parseFloat(document.getElementById('h_guida').value)||0, 
+                h_guida: document.getElementById('h_guida').value || "00:00", // Salvato come stringa HH:MM
                 trasf: parseFloat(document.getElementById('trasferta').value)||0, 
                 timestamp: Date.now() 
             };
@@ -329,7 +290,18 @@
                     }
                     percorso += ` ➔ <b>${d.a}</b>`;
                     
-                    return `<div class="entry"><b>${d.data}</b>: ${percorso} | Guida: ${d.h_guida}h | <b>€${d.trasf}</b></div>`;
+                    // Formatta visivamente le ore in "Xh Ym" salvaguardando i vecchi dati numerici
+                    let oreVisualizza = d.h_guida;
+                    if (typeof oreVisualizza === 'string' && oreVisualizza.includes(':')) {
+                        let [hh, mm] = oreVisualizza.split(':');
+                        oreVisualizza = `${parseInt(hh, 10)}h ${mm}m`;
+                    } else {
+                        let h = Math.floor(oreVisualizza || 0);
+                        let m = Math.round(((oreVisualizza || 0) - h) * 60);
+                        oreVisualizza = `${h}h ${m.toString().padStart(2, '0')}m`;
+                    }
+                    
+                    return `<div class="entry"><b>${d.data}</b>: ${percorso} | Guida: ${oreVisualizza} | <b>€${d.trasf}</b></div>`;
                 }).join('');
             }
             
@@ -356,6 +328,21 @@
             return monday;
         }
 
+        // Funzione helper per convertire la stringa "HH:MM" (o vecchio numero) in decimale per i calcoli dei grafici
+        function timeToDecimal(t) {
+            if (!t) return 0;
+            if (typeof t === 'number') return t;
+            let [h, m] = t.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        // Funzione helper per trasformare i totali decimali dei grafici in stringhe pulite "Xh Ym"
+        function formattaTotaleTachigrafo(dec) {
+            let h = Math.floor(dec);
+            let m = Math.round((dec - h) * 60);
+            return `${h}h ${m.toString().padStart(2, '0')}m`;
+        }
+
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             let oggi = new Date();
@@ -373,7 +360,7 @@
             dati.forEach(d => {
                 if (d.tipo === 'viaggio' && d.data) {
                     let dataViaggio = parseLocalDate(d.data);
-                    let ore = parseFloat(d.h_guida) || 0;
+                    let ore = timeToDecimal(d.h_guida);
                     
                     if (dataViaggio >= lunediCorrente && dataViaggio < prossimoLunedi) {
                         hSett += ore;
@@ -384,8 +371,8 @@
                 }
             });
             
-            document.getElementById('txt-sett').innerText = `${hSett}h / 56h`;
-            document.getElementById('txt-bisett').innerText = `${hBiSett}h / 90h`;
+            document.getElementById('txt-sett').innerText = `${formattaTotaleTachigrafo(hSett)} / 56h`;
+            document.getElementById('txt-bisett').innerText = `${formattaTotaleTachigrafo(hBiSett)} / 90h`;
             document.getElementById('bar-sett').style.width = Math.min(100, (hSett/56)*100) + "%";
             document.getElementById('bar-bisett').style.width = Math.min(100, (hBiSett/90)*100) + "%";
         }
