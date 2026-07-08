@@ -142,12 +142,17 @@
                 <div class="tach-stat"><div class="tach-info"><span>Guida Bisettimanale</span><span id="txt-bisett">0 / 90h</span></div><div class="progress-bar-bg"><div id="bar-bisett" class="progress-bar-fill"></div></div></div>
             </div>
 
+            <!-- RIQUADRO DI CALIBRAZIONE SENZA LIMITI DI ORE -->
             <div class="card">
                 <h3 style="font-size: 1.05em; color: var(--accent); margin-top: 0; margin-bottom: 5px;">⚙️ Allineamento Scheda</h3>
                 <p style="font-size: 0.8em; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.3;">Se hai iniziato a usare l'app a metà ciclo, inserisci qui le ore fatte la settimana scorsa (visibili sul tachigrafo) per sbloccare il conteggio corretto.</p>
-                <label>Ore settimana precedente (Ore:Minuti)</label>
+                <label>Ore settimana precedente (Inserimento Libero)</label>
                 <div class="row" style="align-items: center; margin-top: 4px;">
-                    <div class="col"><input type="time" id="calib_ore" value="00:00"></div>
+                    <div class="col" style="display: flex; align-items: center; gap: 6px;">
+                        <input type="number" id="calib_ore_h" placeholder="Ore (es. 42)" min="0" style="text-align: center; margin-top:0;">
+                        <span style="font-weight: bold; font-size: 1.2em;">:</span>
+                        <input type="number" id="calib_ore_m" placeholder="Min" min="0" max="59" style="text-align: center; margin-top:0;">
+                    </div>
                     <div style="flex: 0 0 110px;"><button type="button" style="margin-top:0; padding: 11px; background-color: #0284c7; color: white; font-size: 0.9em;" onclick="salvaCalibrazione()">ALLINEA</button></div>
                 </div>
             </div>
@@ -160,7 +165,7 @@
         document.getElementById('data_r').valueAsDate = new Date();
 
         let currentTab = 0;
-        let editingTimestamp = null; // Memorizza la tratta che stiamo modificando
+        let editingTimestamp = null; 
 
         document.getElementById('km_r').addEventListener('input', function() {
             let kmAttuali = parseFloat(this.value) || 0;
@@ -260,7 +265,6 @@
             document.getElementById('trasferta').value = ''; document.getElementById('note').value = '';
             document.getElementById('data_v').valueAsDate = new Date();
             
-            // Ripristina lo stato iniziale dei pulsanti
             editingTimestamp = null;
             document.getElementById('btn-salva-tratta').innerText = "SALVA TRATTA";
             document.getElementById('col-annulla-tratta').style.display = "none";
@@ -277,7 +281,6 @@
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
 
             if (editingTimestamp !== null) {
-                // MODALITÀ MODIFICA: Cerca e aggiorna la tratta esistente
                 let index = dati.findIndex(d => d.timestamp === editingTimestamp);
                 if (index !== -1) {
                     dati[index].data = dataViaggio;
@@ -292,10 +295,9 @@
                     alert("Tratta aggiornata con successo!");
                 }
             } else {
-                // MODALITÀ NUOVA TRATTA
                 let v = { 
                     tipo: 'viaggio', data: dataViaggio, 
-                    p: document.getElementById('partenza').value, a: document.getElementById('arrivo').value, 
+                    p = document.getElementById('partenza').value, a: document.getElementById('arrivo').value, 
                     tappe: tappeElenco, km_p: parseFloat(document.getElementById('km_p').value)||0, 
                     km_a: parseFloat(document.getElementById('km_a').value)||0, 
                     h_guida: document.getElementById('h_guida').value || "00:00", 
@@ -309,7 +311,7 @@
             
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
             resetFormViaggio();
-            cambiaTab(2); // Torna direttamente al registro per vedere le modifiche
+            cambiaTab(2); 
         }
 
         function caricaTrattaPerModifica(timestamp) {
@@ -319,7 +321,6 @@
 
             editingTimestamp = timestamp;
 
-            // Compila i campi del modulo
             document.getElementById('data_v').value = viaggio.data;
             document.getElementById('partenza').value = viaggio.p;
             document.getElementById('arrivo').value = viaggio.a;
@@ -329,18 +330,16 @@
             document.getElementById('trasferta').value = viaggio.trasf || '';
             document.getElementById('note').value = viaggio.note || '';
 
-            // Rigenera i campi dinamici delle tappe intermedie
             const container = document.getElementById('tappe-container');
             container.innerHTML = '';
             if (viaggio.tappe && viaggio.tappe.length > 0) {
                 viaggio.tappe.forEach(tappa => aggiungiTappaField(tappa));
             }
 
-            // Cambia grafica per la modalità modifica
             document.getElementById('btn-salva-tratta').innerText = "AGGIORNA TRATTA";
             document.getElementById('col-annulla-tratta').style.display = "block";
             
-            cambiaTab(0); // Sposta l'utente sulla schermata di inserimento dati
+            cambiaTab(0); 
         }
 
         function salvaRifornimento() {
@@ -438,8 +437,13 @@
 
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            
+            // Recupera la calibrazione salvata e la divide nei rispettivi campi Ore e Minuti
             let calibrazioneStr = localStorage.getItem('logiroad_calib_prec') || "00:00";
-            document.getElementById('calib_ore').value = calibrazioneStr;
+            let [c_h, c_m] = calibrazioneStr.split(':');
+            document.getElementById('calib_ore_h').value = parseInt(c_h, 10) || 0;
+            document.getElementById('calib_ore_m').value = parseInt(c_m, 10) || 0;
+            
             let calibDec = timeToDecimal(calibrazioneStr);
 
             let oggi = new Date();
@@ -467,7 +471,14 @@
         }
 
         function salvaCalibrazione() {
-            let val = document.getElementById('calib_ore').value || "00:00";
+            let h = parseInt(document.getElementById('calib_ore_h').value, 10) || 0;
+            let m = parseInt(document.getElementById('calib_ore_m').value, 10) || 0;
+            
+            // Validazione basilare per impedire errori strani nei minuti
+            if (m < 0 || m > 59) { alert("I minuti devono essere compresi tra 0 e 59!"); return; }
+            if (h < 0) { alert("Le ore non possono essere negative!"); return; }
+            
+            let val = `${h}:${m.toString().padStart(2, '0')}`;
             localStorage.setItem('logiroad_calib_prec', val);
             calcolaTachigrafo();
             alert("Tachigrafo allineato correttamente con i dati della scheda!");
