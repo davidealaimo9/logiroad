@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <title>LogiRoad PRO</title>
+    <style>
+        :root { --primary: #0f172a; --accent: #38bdf8; --bg: #e2e8f0; --card-bg: white; --text: #333; --text-muted: #475569; --input-bg: #f8fafc; --border: #cbd5e1; --danger: #ef4444; --success: #22c55e; }
+        body.dark-mode { --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; --text-muted: #94a3b8; --input-bg: #0f172a; --border: #334155; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); touch-action: pan-y; transition: background 0.3s; }
+        .container { max-width: 600px; margin: auto; padding: 15px; }
+        .header-wrapper { position: relative; background-color: #0f172a; color: white; padding: 20px; text-align: center; font-size: 1.5em; font-weight: bold; }
+        .menu-icon { position: absolute; left: 15px; top: 20px; cursor: pointer; }
+        .dropdown { display: none; position: absolute; top: 55px; left: 10px; background: var(--card-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; min-width: 200px; border: 1px solid var(--border); }
+        .dropdown button { display: block; width: 100%; padding: 12px; border: none; background: none; color: var(--text); cursor: pointer; text-align: left; }
+        .nav { display: flex; background: #1e293b; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
+        .nav div { flex: 1; text-align: center; padding: 15px 10px; color: #cbd5e1; cursor: pointer; font-size: 0.85em; border-bottom: 3px solid transparent; }
+        .nav div.active { color: white; border-bottom: 3px solid var(--accent); font-weight: bold; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: var(--accent); font-size: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 0; }
+        label { display: block; margin-top: 10px; font-weight: 600; font-size: 0.8em; color: var(--text-muted); }
+        input, textarea, select { width: 100%; padding: 10px; margin-top: 4px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; background-color: var(--input-bg); color: var(--text); }
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+        button { border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
+        .btn-save { background-color: #0284c7; color: white; }
+        .btn-calc { background-color: var(--success); color: white; }
+        .calc-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; margin-top: 10px; color: #166534; font-weight: bold; text-align: center; display: none; }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+        .tach-stat { padding: 12px; border-radius: 6px; margin-bottom: 15px; background: var(--input-bg); border: 1px solid var(--border); }
+        .tach-info { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; font-size: 0.9em; }
+        .progress-bar-bg { background: #e2e8f0; height: 12px; border-radius: 10px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: #0284c7; width: 0%; transition: width 0.5s; }
+        .entry { border-bottom: 1px solid var(--border); padding: 12px 0; font-size: 0.9em; }
+        .totale-box { background: var(--accent); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-wrapper">
+        <div class="menu-icon" onclick="toggleMenu()">≡</div> LOGIROAD PRO
+        <div id="dropdown-menu" class="dropdown">
+            <button onclick="window.print()">💾 Salva PDF</button>
+            <button onclick="esportaExcel()">📊 Esporta Excel</button>
+            <button onclick="toggleDarkMode()" id="btn-dark">🌙 Modalità Notturna</button>
+        </div>
+    </div>
+    
+    <div class="nav">
+        <div class="active" onclick="cambiaTab(0)">Tratta</div>
+        <div onclick="cambiaTab(1)">Rifornimento</div>
+        <div onclick="cambiaTab(2)">Registro</div>
+        <div onclick="cambiaTab(3)">Tachigrafo</div>
+    </div>
+
+    <div class="container">
+        <!-- TRATTA -->
+        <div id="tab-0" class="tab-content active">
+            <div class="card">
+                <h2>Nuova Tratta</h2>
+                <label>Data</label><input type="date" id="data_v">
+                <div class="row"><div class="col"><label>Partenza</label><input type="text" id="partenza"></div><div class="col"><label>Arrivo</label><input type="text" id="arrivo"></div></div>
+                <div class="row"><div class="col"><label>Km Inizio</label><input type="number" id="km_p"></div><div class="col"><label>Km Fine</label><input type="number" id="km_a"></div></div>
+                <div class="row"><div class="col"><label>Ore Guida</label><input type="number" id="h_guida" step="0.5"></div><div class="col"><label>Trasferta (€)</label><input type="number" id="trasferta"></div></div>
+                <label>Tipo Riposo</label>
+                <select id="tipo_riposo"><option value="normale">Normale</option><option value="ridotto_9h">Ridotto (9h)</option></select>
+                <label>Note</label><textarea id="note"></textarea>
+                <button class="btn-save" onclick="salvaViaggio()">SALVA TRATTA</button>
+            </div>
+        </div>
+
+        <!-- RIFORNIMENTO -->
+        <div id="tab-1" class="tab-content">
+            <div class="card">
+                <h2>Rifornimento</h2>
+                <label>Data</label><input type="date" id="data_r">
+                <label>Km attuali</label><input type="number" id="km_r">
+                <div class="row"><div class="col"><label>Litri</label><input type="number" id="litri" step="0.1"></div><div class="col"><label>Prezzo (€)</label><input type="number" id="prezzo" step="0.01"></div></div>
+                
+                <h3 style="font-size:0.9em; margin-top:20px;">Calcolatore Consumi</h3>
+                <label>Km percorsi (ultimo pieno)</label><input type="number" id="km_calc">
+                <button class="btn-calc" onclick="calcolaConsumo()">CALCOLA L/100km</button>
+                <div id="box-calc" class="calc-box"></div>
+                
+                <button class="btn-save" onclick="salvaRifornimento()">SALVA RIFORNIMENTO</button>
+            </div>
+        </div>
+
+        <!-- REGISTRO -->
+        <div id="tab-2" class="tab-content">
+            <div class="card">
+                <h2>Storico e Trasferte</h2>
+                <div class="row"><div class="col"><select id="filter-mese" onchange="aggiornaRegistro()"><option value="all">Tutti i mesi</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></div><div class="col"><select id="filter-anno" onchange="aggiornaRegistro()"><option value="all">Tutti gli anni</option></select></div></div>
+                <div id="totale-trasferte-box" class="totale-box">Totale: € 0.00</div>
+                <div id="lista-viaggi"></div>
+                <button style="background:var(--danger); color:white;" onclick="pulisciTutto()">Cancella Tutto</button>
+            </div>
+        </div>
+
+        <!-- TACHIGRAFO -->
+        <div id="tab-3" class="tab-content">
+            <div class="card">
+                <h2>Grafici Guida</h2>
+                <div class="tach-stat"><div class="tach-info"><span>Guida Settimanale</span><span id="txt-sett">0 / 56h</span></div><div class="progress-bar-bg"><div id="bar-sett" class="progress-bar-fill"></div></div></div>
+                <div class="tach-stat"><div class="tach-info"><span>Guida Bisettimanale</span><span id="txt-bisett">0 / 90h</span></div><div class="progress-bar-bg"><div id="bar-bisett" class="progress-bar-fill"></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+        document.getElementById('data_v').valueAsDate = new Date(); document.getElementById('data_r').valueAsDate = new Date();
+
+        function toggleMenu() { document.getElementById('dropdown-menu').style.display = (document.getElementById('dropdown-menu').style.display === 'block') ? 'none' : 'block'; }
+        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); toggleMenu(); }
+
+        function cambiaTab(i) {
+            document.querySelectorAll('.tab-content').forEach((t, index) => t.classList.toggle('active', index === i));
+            document.querySelectorAll('.nav div').forEach((n, index) => n.classList.toggle('active', index === i));
+            if(i === 2) { popolaAnni(); aggiornaRegistro(); }
+            if(i === 3) calcolaTachigrafo();
+        }
+
+        function calcolaConsumo() {
+            let l = parseFloat(document.getElementById('litri').value);
+            let k = parseFloat(document.getElementById('km_calc').value);
+            let box = document.getElementById('box-calc');
+            if(l > 0 && k > 0) {
+                let consumo = (l / k) * 100;
+                box.style.display = 'block';
+                box.innerText = `Consumo: ${consumo.toFixed(2)} L/100km`;
+            }
+        }
+
+        function salvaViaggio() {
+            let v = { tipo: 'viaggio', data: document.getElementById('data_v').value, p: document.getElementById('partenza').value, a: document.getElementById('arrivo').value, km_p: parseFloat(document.getElementById('km_p').value)||0, km_a: parseFloat(document.getElementById('km_a').value)||0, h_guida: parseFloat(document.getElementById('h_guida').value)||0, trasf: parseFloat(document.getElementById('trasferta').value)||0, timestamp: Date.now() };
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(v);
+            localStorage.setItem('logiroad_dati', JSON.stringify(dati));
+            alert("Tratta salvata!");
+        }
+
+        function salvaRifornimento() {
+            let r = { tipo: 'rifornimento', data: document.getElementById('data_r').value, l: document.getElementById('litri').value, km: document.getElementById('km_r').value, timestamp: Date.now() };
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(r);
+            localStorage.setItem('logiroad_dati', JSON.stringify(dati));
+            alert("Rifornimento salvato!");
+        }
+
+        function popolaAnni() {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let anni = [...new Set(dati.map(d => d.data.substring(0, 4)))].sort((a,b) => b - a);
+            document.getElementById('filter-anno').innerHTML = '<option value="all">Tutti gli anni</option>' + anni.map(a => `<option value="${a}">${a}</option>`).join('');
+        }
+
+        function aggiornaRegistro() {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let mSel = document.getElementById('filter-mese').value;
+            let aSel = document.getElementById('filter-anno').value;
+            let tot = 0;
+            let filtered = dati.filter(d => { let [anno, mese] = d.data.split('-'); return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel); });
+            filtered.sort((a,b) => b.timestamp - a.timestamp);
+            filtered.forEach(d => { if(d.tipo === 'viaggio') tot += (d.trasf || 0); });
+            document.getElementById('totale-trasferte-box').innerText = `Totale: € ${tot.toFixed(2)}`;
+            document.getElementById('lista-viaggi').innerHTML = filtered.map(d => 
+                d.tipo === 'viaggio' ? `<div class="entry"><b>${d.data}</b>: ${d.p} ➔ ${d.a} | <b>€${d.trasf}</b></div>` : 
+                `<div class="entry"><b>${d.data}</b>: Rifornimento ${d.l}L</div>`
+            ).join('');
+        }
+
+        function calcolaTachigrafo() {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let ora = Date.now();
+            let v7 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 7*24*60*60*1000));
+            let v14 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 14*24*60*60*1000));
+            let h7 = v7.reduce((a,b) => a + b.h_guida, 0);
+            let h14 = v14.reduce((a,b) => a + b.h_guida, 0);
+            document.getElementById('txt-sett').innerText = `${h7}h / 56h`;
+            document.getElementById('txt-bisett').innerText = `${h14}h / 90h`;
+            document.getElementById('bar-sett').style.width = Math.min(100, (h7/56)*100) + "%";
+            document.getElementById('bar-bisett').style.width = Math.min(100, (h14/90)*100) + "%";
+        }
+
+        function pulisciTutto() { if(confirm("Cancella tutto?")) { localStorage.removeItem('logiroad_dati'); aggiornaRegistro(); } }
+        function esportaExcel() { 
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let csv = "Tipo;Data;Info;Valore\r\n" + dati.map(d => `${d.tipo};${d.data};${d.tipo==='viaggio'?d.p+'-'+d.a:d.l+'L'};${d.trasf||0}`).join('\r\n');
+            let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = 'registro.csv'; a.click();
+        }
+    </script>
+</body>
+</html>
