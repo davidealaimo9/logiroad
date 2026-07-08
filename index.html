@@ -141,12 +141,12 @@
             <div class="card">
                 <h3 style="font-size: 1.05em; color: var(--accent); margin-top: 0; margin-bottom: 5px;">⚙️ Allineamento Scheda</h3>
                 <p style="font-size: 0.8em; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.3;">Se hai iniziato a usare l'app a metà ciclo, inserisci qui le ore fatte la settimana scorsa (visibili sul tachigrafo) per sbloccare il conteggio corretto.</p>
-                <label>Ore settimana precedente (Inserimento Libero)</label>
+                <label>Ore settimana precedente</label>
                 <div class="row" style="align-items: center; margin-top: 4px;">
                     <div class="col" style="display: flex; align-items: center; gap: 6px;">
-                        <input type="number" id="calib_ore_h" placeholder="Ore (es. 42)" min="0" style="text-align: center; margin-top:0;">
+                        <input type="number" id="calib_ore_h" placeholder="Ore (es. 45)" min="0" style="text-align: center; margin-top: 0;">
                         <span style="font-weight: bold; font-size: 1.2em;">:</span>
-                        <input type="number" id="calib_ore_m" placeholder="Min" min="0" max="59" style="text-align: center; margin-top:0;">
+                        <input type="number" id="calib_ore_m" placeholder="Min" min="0" max="59" style="text-align: center; margin-top: 0;">
                     </div>
                     <div style="flex: 0 0 110px;"><button type="button" style="margin-top:0; padding: 11px; background-color: #0284c7; color: white; font-size: 0.9em;" onclick="salvaCalibrazione()">ALLINEA</button></div>
                 </div>
@@ -160,7 +160,7 @@
         document.getElementById('data_r').valueAsDate = new Date();
 
         let currentTab = 0;
-        let editingTimestamp = null; 
+        let editingTimestamp = null;
 
         document.getElementById('km_r').addEventListener('input', function() {
             let kmAttuali = parseFloat(this.value) || 0;
@@ -286,6 +286,7 @@
                     dati[index].km_a = parseFloat(document.getElementById('km_a').value)||0;
                     dati[index].h_guida = document.getElementById('h_guida').value || "00:00";
                     dati[index].trasf = parseFloat(document.getElementById('trasferta').value)||0;
+                    dati[index].tipo_riposo = document.getElementById('tipo_riposo').value;
                     dati[index].note = document.getElementById('note').value || "";
                     alert("Tratta aggiornata con successo!");
                 }
@@ -297,206 +298,192 @@
                     km_a: parseFloat(document.getElementById('km_a').value)||0, 
                     h_guida: document.getElementById('h_guida').value || "00:00", 
                     trasf: parseFloat(document.getElementById('trasferta').value)||0, 
+                    tipo_riposo: document.getElementById('tipo_riposo').value,
                     note: document.getElementById('note').value || "",
                     timestamp: Date.now() 
                 };
                 dati.push(v);
                 alert("Tratta salvata!");
             }
-            
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
             resetFormViaggio();
-            cambiaTab(2); 
-        }
-
-        function caricaTrattaPerModifica(timestamp) {
-            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
-            let viaggio = dati.find(d => d.timestamp === timestamp);
-            if (!viaggio) return;
-
-            editingTimestamp = timestamp;
-
-            document.getElementById('data_v').value = viaggio.data;
-            document.getElementById('partenza').value = viaggio.p;
-            document.getElementById('arrivo').value = viaggio.a;
-            document.getElementById('km_p').value = viaggio.km_p || '';
-            document.getElementById('km_a').value = viaggio.km_a || '';
-            document.getElementById('h_guida').value = viaggio.h_guida || '00:00';
-            document.getElementById('trasferta').value = viaggio.trasf || '';
-            document.getElementById('note').value = viaggio.note || '';
-
-            const container = document.getElementById('tappe-container');
-            container.innerHTML = '';
-            if (viaggio.tappe && viaggio.tappe.length > 0) {
-                viaggio.tappe.forEach(tappa => aggiungiTappaField(tappa));
-            }
-
-            document.getElementById('btn-salva-tratta').innerText = "AGGIORNA TRATTA";
-            document.getElementById('col-annulla-tratta').style.display = "block";
-            
-            cambiaTab(0); 
         }
 
         function salvaRifornimento() {
+            let dataR = document.getElementById('data_r').value;
+            if(!dataR) { alert("Inserisci una data valida!"); return; }
             let r = { 
-                tipo: 'rifornimento', data: document.getElementById('data_r').value, 
-                l: parseFloat(document.getElementById('litri').value)||0, km: parseFloat(document.getElementById('km_r').value)||0, 
-                prezzo: parseFloat(document.getElementById('prezzo').value)||0, timestamp: Date.now() 
+                tipo: 'rifornimento', data: dataR, 
+                l: parseFloat(document.getElementById('litri').value)||0, 
+                km: parseInt(document.getElementById('km_r').value, 10)||0, 
+                prezzo: parseFloat(document.getElementById('prezzo').value)||0,
+                timestamp: Date.now() 
             };
-            if(!r.data) { alert("Inserisci una data valida!"); return; }
-            
-            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; dati.push(r);
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || []; 
+            dati.push(r);
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
-            alert("Rifornimento salvato!"); mostraUltimoKm(); 
+            alert("Rifornimento salvato!");
+            mostraUltimoKm();
         }
 
         function popolaAnni() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             let anni = [...new Set(dati.filter(d => d.data).map(d => d.data.substring(0, 4)))].sort((a,b) => b - a);
-            document.getElementById('filter-anno').innerHTML = '<option value="all">Tutti gli anni</option>' + anni.map(a => `<option value="${a}">${a}</option>`).join('');
+            let select = document.getElementById('filter-anno');
+            let valPrecedente = select.value;
+            select.innerHTML = '<option value="all">Tutti gli anni</option>' + anni.map(a => `<option value="${a}">${a}</option>`).join('');
+            if(anni.includes(valPrecedente)) select.value = valPrecedente;
         }
 
         function aggiornaRegistro() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             let mSel = document.getElementById('filter-mese').value;
             let aSel = document.getElementById('filter-anno').value;
-            let tot = 0;
-            
-            let filtered = dati.filter(d => { 
+            let totTrasferte = 0;
+
+            let filtered = dati.filter(d => {
                 if(!d.data) return false;
-                let [anno, mese] = d.data.split('-'); 
-                return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel); 
+                let [anno, mese] = d.data.split('-');
+                return (mSel === 'all' || mese === mSel) && (aSel === 'all' || anno === aSel);
             });
+
             filtered.sort((a,b) => b.timestamp - a.timestamp);
-            
-            let tratte = filtered.filter(d => d.tipo === 'viaggio');
-            let rifornimenti = filtered.filter(d => d.tipo === 'rifornimento');
-            tratte.forEach(d => { tot += (d.trasf || 0); });
-            document.getElementById('totale-trasferte-box').innerText = `Totale Trasferte: € ${tot.toFixed(2)}`;
-            
-            if (tratte.length === 0) {
-                document.getElementById('lista-viaggi').innerHTML = `<div class="entry" style="color:var(--text-muted); font-style: italic;">Nessuna tratta in questo periodo.</div>`;
-            } else {
-                document.getElementById('lista-viaggi').innerHTML = tratte.map(d => {
-                    let percorso = `<b>${d.p}</b>`;
-                    if (d.tappe && d.tappe.length > 0) percorso += ` ➔ <span style="color: var(--text-muted); font-size: 0.9em; font-weight: 500;">[${d.tappe.join(' ➔ ')}]</span>`;
-                    percorso += ` ➔ <b>${d.a}</b>`;
-                    
-                    let oreVisualizza = d.h_guida;
-                    if (typeof oreVisualizza === 'string' && oreVisualizza.includes(':')) {
-                        let [hh, mm] = oreVisualizza.split(':'); oreVisualizza = `${parseInt(hh, 10)}h ${mm}m`;
-                    } else {
-                        let h = Math.floor(oreVisualizza || 0); let m = Math.round(((oreVisualizza || 0) - h) * 60);
-                        oreVisualizza = `${h}h ${m.toString().padStart(2, '0')}m`;
-                    }
-                    
-                    return `
-                    <div class="entry" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                        <div style="flex: 1;"><b>${d.data}</b>: ${percorso} | Guida: ${oreVisualizza} | <b>€${d.trasf}</b></div>
-                        <button type="button" onclick="caricaTrattaPerModifica(${d.timestamp})" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 0.85em; background-color: #0284c7; color: white; border-radius: 4px;">✏️</button>
-                    </div>`;
-                }).join('');
+
+            let viaggiHtml = "";
+            let rifornimentiHtml = "";
+
+            filtered.forEach(d => {
+                if(d.tipo === 'viaggio') {
+                    totTrasferte += (d.trasf || 0);
+                    let tappeStr = d.tappe && d.tappe.length > 0 ? ` <br><small style="color:var(--text-muted)">📍 Tappe: ${d.tappe.join(' ➔ ')}</small>` : "";
+                    viaggiHtml += `
+                        <div class="entry">
+                            <b>${d.data}</b>: ${d.p} ➔ ${d.a} | Guida: ${d.h_guida} | <b>€${d.trasf}</b>${tappeStr}
+                            <div style="margin-top:5px; display:flex; gap:5px;">
+                                <button onclick="avviaModifica(${d.timestamp})" style="width:auto; margin:0; padding:5px 10px; font-size:0.8em; background-color:#0284c7; color:white;">✏️ Modifica</button>
+                                <button onclick="eliminaElemento(${d.timestamp})" style="width:auto; margin:0; padding:5px 10px; font-size:0.8em; background-color:var(--danger); color:white;">❌ Elimina</button>
+                            </div>
+                        </div>`;
+                } else if(d.tipo === 'rifornimento') {
+                    rifornimentiHtml += `
+                        <div class="entry">
+                            <b>${d.data}</b>: Rifornimento ${d.l}L ${d.km ? '(a km ' + d.km + ')' : ''} | Prezzo: €${d.prezzo || 0}
+                            <div style="margin-top:5px;">
+                                <button onclick="eliminaElemento(${d.timestamp})" style="width:auto; margin:0; padding:5px 10px; font-size:0.8em; background-color:var(--danger); color:white;">❌ Elimina</button>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            document.getElementById('totale-trasferte-box').innerText = `Totale: € ${totTrasferte.toFixed(2)}`;
+            document.getElementById('lista-viaggi').innerHTML = viaggiHtml || "<p style='font-size:0.85em; color:var(--text-muted);'>Nessuna tratta registrata.</p>";
+            document.getElementById('lista-rifornimenti').innerHTML = rifornimentiHtml || "<p style='font-size:0.85em; color:var(--text-muted);'>Nessun rifornimento registrato.</p>";
+        }
+
+        function avviaModifica(timestamp) {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let v = dati.find(d => d.timestamp === timestamp);
+            if(!v) return;
+
+            editingTimestamp = timestamp;
+            document.getElementById('data_v').value = v.data;
+            document.getElementById('partenza').value = v.p;
+            document.getElementById('arrivo').value = v.a;
+            document.getElementById('km_p').value = v.km_p;
+            document.getElementById('km_a').value = v.km_a;
+            document.getElementById('h_guida').value = v.h_guida;
+            document.getElementById('trasferta').value = v.trasf;
+            document.getElementById('tipo_riposo').value = v.tipo_riposo || "normale";
+            document.getElementById('note').value = v.note || "";
+
+            const container = document.getElementById('tappe-container');
+            container.innerHTML = '';
+            if(v.tappe) { v.tappe.forEach(t => aggiungiTappaField(t)); }
+
+            document.getElementById('btn-salva-tratta').innerText = "AGGIORNA TRATTA";
+            document.getElementById('col-annulla-tratta').style.display = "block";
+            cambiaTab(0);
+        }
+
+        function eliminaElemento(timestamp) {
+            if(confirm("Vuoi davvero eliminare questo elemento dallo storico?")) {
+                let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+                dati = dati.filter(d => d.timestamp !== timestamp);
+                localStorage.setItem('logiroad_dati', JSON.stringify(dati));
+                aggiornaRegistro();
             }
-            
-            if (rifornimenti.length === 0) {
-                document.getElementById('lista-rifornimenti').innerHTML = `<div class="entry" style="color:var(--text-muted); font-style: italic;">Nessun rifornimento in questo periodo.</div>`;
-            } else {
-                document.getElementById('lista-rifornimenti').innerHTML = rifornimenti.map(d => 
-                    `<div class="entry"><b>${d.data}</b>: Rifornito <b>${d.l} Litri</b> ${d.km ? '(a km ' + d.km.toLocaleString() + ')' : ''} ${d.prezzo ? '| Spesa: €' + d.prezzo : ''}</div>`
-                ).join('');
-            }
         }
 
-        function parseLocalDate(dateStr) {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            return new Date(y, m - 1, d);
+        // Funzioni Helper per gestire i tempi in formato stringa "Ore:Minuti" e convertirli in calcoli
+        function timeToDecimal(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            let [h, m] = timeStr.split(':').map(Number);
+            return h + (m / 60);
         }
 
-        function getMonday(d) {
-            const date = new Date(d); const day = date.getDay();
-            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(date.setDate(diff)); monday.setHours(0, 0, 0, 0);
-            return monday;
-        }
-
-        function timeToDecimal(t) {
-            if (!t) return 0;
-            if (typeof t === 'number') return t;
-            let [h, m] = t.split(':').map(Number); return h + (m / 60);
-        }
-
-        function formattaTotaleTachigrafo(dec) {
-            let h = Math.floor(dec); let m = Math.round((dec - h) * 60);
+        function decimalToTimeString(dec) {
+            let h = Math.floor(dec);
+            let m = Math.round((dec - h) * 60);
             return `${h}h ${m.toString().padStart(2, '0')}m`;
         }
 
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             
-            let calibrazioneStr = localStorage.getItem('logiroad_calib_prec') || "00:00";
-            let [c_h, c_m] = calibrazioneStr.split(':');
-            document.getElementById('calib_ore_h').value = parseInt(c_h, 10) || 0;
-            document.getElementById('calib_ore_m').value = parseInt(c_m, 10) || 0;
+            // Lettura calibrazione ore libera (senza vincolo di 24 ore)
+            let calib_h = parseInt(localStorage.getItem('logiroad_calib_h'), 10) || 0;
+            let calib_m = parseInt(localStorage.getItem('logiroad_calib_m'), 10) || 0;
+            document.getElementById('calib_ore_h').value = calib_h || '';
+            document.getElementById('calib_ore_m').value = calib_m || '';
             
-            let calibDec = timeToDecimal(calibrazioneStr);
+            let calibDec = calib_h + (calib_m / 60);
 
-            let oggi = new Date();
-            let lunediCorrente = getMonday(oggi);
-            let lunediPrecedente = new Date(lunediCorrente); lunediPrecedente.setDate(lunediPrecedente.getDate() - 7);
-            let prossimoLunedi = new Date(lunediCorrente); prossimoLunedi.setDate(prossimoLunedi.getDate() + 7);
+            let ora = Date.now();
+            let v7 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 7*24*60*60*1000));
+            let v14 = dati.filter(d => d.tipo === 'viaggio' && d.timestamp > (ora - 14*24*60*60*1000));
             
-            let hSett = 0; let hBiSett = 0;
+            let h7 = v7.reduce((a,b) => a + timeToDecimal(b.h_guida), 0);
+            let h14 = v14.reduce((a,b) => a + timeToDecimal(b.h_guida), 0) + calibDec;
             
-            dati.forEach(d => {
-                if (d.tipo === 'viaggio' && d.data) {
-                    let dataViaggio = parseLocalDate(d.data);
-                    let ore = timeToDecimal(d.h_guida);
-                    if (dataViaggio >= lunediCorrente && dataViaggio < prossimoLunedi) hSett += ore;
-                    if (dataViaggio >= lunediPrecedente && dataViaggio < prossimoLunedi) hBiSett += ore;
-                }
-            });
-            
-            hBiSett += calibDec;
-            
-            document.getElementById('txt-sett').innerText = `${formattaTotaleTachigrafo(hSett)} / 56h`;
-            document.getElementById('txt-bisett').innerText = `${formattaTotaleTachigrafo(hBiSett)} / 90h`;
-            document.getElementById('bar-sett').style.width = Math.min(100, (hSett/56)*100) + "%";
-            document.getElementById('bar-bisett').style.width = Math.min(100, (hBiSett/90)*100) + "%";
+            document.getElementById('txt-sett').innerText = `${decimalToTimeString(h7)} / 56h`;
+            document.getElementById('txt-bisett').innerText = `${decimalToTimeString(h14)} / 90h`;
+            document.getElementById('bar-sett').style.width = Math.min(100, (h7/56)*100) + "%";
+            document.getElementById('bar-bisett').style.width = Math.min(100, (h14/90)*100) + "%";
         }
 
         function salvaCalibrazione() {
             let h = parseInt(document.getElementById('calib_ore_h').value, 10) || 0;
             let m = parseInt(document.getElementById('calib_ore_m').value, 10) || 0;
-            
             if (m < 0 || m > 59) { alert("I minuti devono essere compresi tra 0 e 59!"); return; }
             if (h < 0) { alert("Le ore non possono essere negative!"); return; }
             
-            let val = `${h}:${m.toString().padStart(2, '0')}`;
-            localStorage.setItem('logiroad_calib_prec', val);
+            localStorage.setItem('logiroad_calib_h', h);
+            localStorage.setItem('logiroad_calib_m', m);
             calcolaTachigrafo();
-            alert("Tachigrafo allineato correttamente con i dati della scheda!");
+            alert("Allineamento salvato ed applicato alla guida bisettimanale!");
         }
 
         function pulisciTutto() { 
-            if(confirm("Sei sicuro di voler cancellare definitivamente tutto il registro?")) { 
-                localStorage.removeItem('logiroad_dati'); localStorage.removeItem('logiroad_calib_prec');
-                resetFormViaggio();
+            if(confirm("Sei sicuro di voler cancellare definitivamente tutto lo storico e gli allineamenti?")) { 
+                localStorage.removeItem('logiroad_dati'); 
+                localStorage.removeItem('logiroad_calib_h');
+                localStorage.removeItem('logiroad_calib_m');
                 aggiornaRegistro(); 
             } 
         }
-
+        
         function esportaExcel() { 
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
-            let csv = "\uFEFFTipo;Data;Dettagli;Valore (€)\r\n" + dati.map(d => {
-                let info = '';
-                if (d.tipo === 'viaggio') {
-                    info = d.p; if (d.tappe && d.tappe.length > 0) info += ` -> (${d.tappe.join(' -> ')})`;
-                    info += ` -> ${d.a}`;
-                } else { info = `${d.l}L`; }
-                let val = d.tipo === 'viaggio' ? (d.trasf || 0) : (d.prezzo || '');
-                return `${d.tipo};${d.data};${info};${val}`;
-            }).join('\r\n');
-            
+            let csv = "\uFEFFTipo;Data;Dettagli;Valore/Dato\r\n";
+            dati.forEach(d => {
+                if(d.tipo === 'viaggio') {
+                    let percorso = d.p + " a " + d.a;
+                    if(d.tappe && d.tappe.length > 0) percorso += " via " + d.tappe.join('-');
+                    csv += `Tratta;${d.data};${percorso};Guida: ${d.h_guida} - Trasferta: €${d.trasf}\r\n`;
+                } else {
+                    csv += `Rifornimento;${d.data};Km totali: ${d.km};Litri: ${d.l}L\r\n`;
+                }
+            });
             let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'registro_logiroad.csv'; a.click();
         }
