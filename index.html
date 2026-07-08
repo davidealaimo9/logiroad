@@ -63,6 +63,7 @@
     </div>
 
     <div class="container">
+        <!-- TRATTA -->
         <div id="tab-0" class="tab-content active">
             <div class="card">
                 <h2>Nuova Tratta</h2>
@@ -85,15 +86,22 @@
             </div>
         </div>
 
+        <!-- RIFORNIMENTO -->
         <div id="tab-1" class="tab-content">
             <div class="card">
                 <h2>Rifornimento</h2>
                 <label>Data</label><input type="date" id="data_r">
-                <label>Km attuali</label><input type="number" id="km_r">
+                
+                <label>Km attuali (da contachilometri)</label>
+                <input type="number" id="km_r" placeholder="Es. 152400">
+                <div id="info-ultimo-km" style="font-size: 0.85em; color: var(--text-muted); margin-top: 4px; font-style: italic;"></div>
+                
                 <div class="row"><div class="col"><label>Litri</label><input type="number" id="litri" step="0.1"></div><div class="col"><label>Prezzo (€)</label><input type="number" id="prezzo" step="0.01"></div></div>
                 
-                <h3 style="font-size:0.9em; margin-top:20px;">Calcolatore Consumi</h3>
-                <label>Km percorsi (ultimo pieno)</label><input type="number" id="km_calc">
+                <h3 style="font-size:0.9em; margin-top:20px;">Calcolatore Consumi (Automatico)</h3>
+                <label>Km percorsi dall'ultimo pieno</label>
+                <input type="number" id="km_calc" placeholder="Inserisci i 'Km attuali' sopra..." readonly style="background-color: var(--bg); opacity: 0.7;">
+                
                 <button class="btn-calc" onclick="calcolaConsumo()">CALCOLA L/100km</button>
                 <div id="box-calc" class="calc-box"></div>
                 
@@ -101,6 +109,7 @@
             </div>
         </div>
 
+        <!-- REGISTRO -->
         <div id="tab-2" class="tab-content">
             <div class="card">
                 <h2>Storico e Trasferte</h2>
@@ -121,6 +130,7 @@
             </div>
         </div>
 
+        <!-- TACHIGRAFO -->
         <div id="tab-3" class="tab-content">
             <div class="card">
                 <h2>Grafici Guida</h2>
@@ -134,6 +144,56 @@
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         document.getElementById('data_v').valueAsDate = new Date(); 
         document.getElementById('data_r').valueAsDate = new Date();
+
+        // Variabile globale per tracciare la scheda attiva
+        let currentTab = 0;
+
+        // Ascoltatore chilometri automatici
+        document.getElementById('km_r').addEventListener('input', function() {
+            let kmAttuali = parseFloat(this.value) || 0;
+            let infoBox = document.getElementById('info-ultimo-km');
+            let ultimoKm = parseFloat(infoBox.dataset.ultimoKm) || 0;
+            
+            if (kmAttuali > ultimoKm && ultimoKm > 0) {
+                document.getElementById('km_calc').value = kmAttuali - ultimoKm;
+            } else {
+                document.getElementById('km_calc').value = '';
+            }
+        });
+
+        // --- SISTEMA DI LOGICA SWIPE ---
+        let touchstartX = 0;
+        let touchstartY = 0;
+        let touchendX = 0;
+        let touchendY = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            touchstartX = e.changedTouches[0].screenX;
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', function(e) {
+            touchendX = e.changedTouches[0].screenX;
+            touchendY = e.changedTouches[0].screenY;
+            analizzaSwipe();
+        }, {passive: true});
+
+        function analizzaSwipe() {
+            let diffX = touchendX - touchstartX;
+            let diffY = touchendY - touchstartY;
+
+            // Lo swipe deve essere prevalentemente orizzontale e lungo almeno 60 pixel
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
+                if (diffX > 0) {
+                    // Trascina verso DESTRA -> vai a SINISTRA (scheda precedente)
+                    if (currentTab > 0) cambiaTab(currentTab - 1);
+                } else {
+                    // Trascina verso SINISTRA -> vai a DESTRA (scheda successiva)
+                    if (currentTab < 3) cambiaTab(currentTab + 1);
+                }
+            }
+        }
+        // -------------------------------
 
         function toggleMenu() { 
             const menu = document.getElementById('dropdown-menu');
@@ -155,10 +215,30 @@
         }
 
         function cambiaTab(i) {
+            currentTab = i; // Aggiorna l'indice corrente
             document.querySelectorAll('.tab-content').forEach((t, index) => t.classList.toggle('active', index === i));
             document.querySelectorAll('.nav div').forEach((n, index) => n.classList.toggle('active', index === i));
+            if(i === 1) mostraUltimoKm(); 
             if(i === 2) { popolaAnni(); aggiornaRegistro(); }
             if(i === 3) calcolaTachigrafo();
+        }
+
+        function mostraUltimoKm() {
+            let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
+            let rifornimenti = dati.filter(d => d.tipo === 'rifornimento').sort((a,b) => b.timestamp - a.timestamp);
+            let infoBox = document.getElementById('info-ultimo-km');
+            
+            if (rifornimenti.length > 0) {
+                let ultimoKm = rifornimenti[0].km;
+                infoBox.innerHTML = `Valore dell'ultimo pieno salvato: <b>${ultimoKm.toLocaleString()} km</b>`;
+                infoBox.dataset.ultimoKm = ultimoKm;
+            } else {
+                infoBox.innerHTML = `Nessun rifornimento precedente trovato nello storico.`;
+                infoBox.dataset.ultimoKm = 0;
+            }
+            document.getElementById('km_r').value = '';
+            document.getElementById('km_calc').value = '';
+            document.getElementById('box-calc').style.display = 'none';
         }
 
         function calcolaConsumo() {
@@ -179,12 +259,8 @@
             div.style.marginTop = '8px';
             div.style.alignItems = 'center';
             div.innerHTML = `
-                <div class="col">
-                    <input type="text" class="tappa-input" placeholder="Cliente / Carico-Scarico Intermedio" value="${valore}">
-                </div>
-                <div style="flex: 0 0 45px;">
-                    <button type="button" style="background-color: var(--danger); color: white; padding: 10px; margin-top: 4px; border-radius: 6px; width: 100%;" onclick="this.parentElement.parentElement.remove()">❌</button>
-                </div>
+                <div class="col"><input type="text" class="tappa-input" placeholder="Cliente / Carico-Scarico Intermedio" value="${valore}"></div>
+                <div style="flex: 0 0 45px;"><button type="button" style="background-color: var(--danger); color: white; padding: 10px; margin-top: 4px; border-radius: 6px; width: 100%;" onclick="this.parentElement.parentElement.remove()">❌</button></div>
             `;
             container.appendChild(div);
         }
@@ -195,7 +271,7 @@
             document.getElementById('tappe-container').innerHTML = ''; 
             document.getElementById('km_p').value = '';
             document.getElementById('km_a').value = '';
-            document.getElementById('h_guida').value = '00:00'; // Reset a mezzanotte/zero ore
+            document.getElementById('h_guida').value = '00:00';
             document.getElementById('trasferta').value = '';
             document.getElementById('note').value = '';
             document.getElementById('data_v').valueAsDate = new Date();
@@ -216,7 +292,7 @@
                 tappe: tappeElenco, 
                 km_p: parseFloat(document.getElementById('km_p').value)||0, 
                 km_a: parseFloat(document.getElementById('km_a').value)||0, 
-                h_guida: document.getElementById('h_guida').value || "00:00", // Salvato come stringa HH:MM
+                h_guida: document.getElementById('h_guida').value || "00:00", 
                 trasf: parseFloat(document.getElementById('trasferta').value)||0, 
                 timestamp: Date.now() 
             };
@@ -246,12 +322,7 @@
             localStorage.setItem('logiroad_dati', JSON.stringify(dati));
             
             alert("Rifornimento salvato!");
-            document.getElementById('litri').value = '';
-            document.getElementById('km_r').value = '';
-            document.getElementById('prezzo').value = '';
-            document.getElementById('km_calc').value = '';
-            document.getElementById('box-calc').style.display = 'none';
-            document.getElementById('data_r').valueAsDate = new Date();
+            mostraUltimoKm(); 
         }
 
         function popolaAnni() {
@@ -290,7 +361,6 @@
                     }
                     percorso += ` ➔ <b>${d.a}</b>`;
                     
-                    // Formatta visivamente le ore in "Xh Ym" salvaguardando i vecchi dati numerici
                     let oreVisualizza = d.h_guida;
                     if (typeof oreVisualizza === 'string' && oreVisualizza.includes(':')) {
                         let [hh, mm] = oreVisualizza.split(':');
@@ -309,7 +379,7 @@
                 document.getElementById('lista-rifornimenti').innerHTML = `<div class="entry" style="color:var(--text-muted); font-style: italic;">Nessun rifornimento in questo periodo.</div>`;
             } else {
                 document.getElementById('lista-rifornimenti').innerHTML = rifornimenti.map(d => 
-                    `<div class="entry"><b>${d.data}</b>: Rifornito <b>${d.l} Litri</b> ${d.km ? '(a km ' + d.km + ')' : ''} ${d.prezzo ? '| Spesa: €' + d.prezzo : ''}</div>`
+                    `<div class="entry"><b>${d.data}</b>: Rifornito <b>${d.l} Litri</b> ${d.km ? '(a km ' + d.km.toLocaleString() + ')' : ''} ${d.prezzo ? '| Spesa: €' + d.prezzo : ''}</div>`
                 ).join('');
             }
         }
@@ -328,7 +398,6 @@
             return monday;
         }
 
-        // Funzione helper per convertire la stringa "HH:MM" (o vecchio numero) in decimale per i calcoli dei grafici
         function timeToDecimal(t) {
             if (!t) return 0;
             if (typeof t === 'number') return t;
@@ -336,7 +405,6 @@
             return h + (m / 60);
         }
 
-        // Funzione helper per trasformare i totali decimali dei grafici in stringhe pulite "Xh Ym"
         function formattaTotaleTachigrafo(dec) {
             let h = Math.floor(dec);
             let m = Math.round((dec - h) * 60);
@@ -347,27 +415,19 @@
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             let oggi = new Date();
             let lunediCorrente = getMonday(oggi);
-            
             let lunediPrecedente = new Date(lunediCorrente);
             lunediPrecedente.setDate(lunediPrecedente.getDate() - 7);
-            
             let prossimoLunedi = new Date(lunediCorrente);
             prossimoLunedi.setDate(prossimoLunedi.getDate() + 7);
             
-            let hSett = 0;
-            let hBiSett = 0;
+            let hSett = 0; let hBiSett = 0;
             
             dati.forEach(d => {
                 if (d.tipo === 'viaggio' && d.data) {
                     let dataViaggio = parseLocalDate(d.data);
                     let ore = timeToDecimal(d.h_guida);
-                    
-                    if (dataViaggio >= lunediCorrente && dataViaggio < prossimoLunedi) {
-                        hSett += ore;
-                    }
-                    if (dataViaggio >= lunediPrecedente && dataViaggio < prossimoLunedi) {
-                        hBiSett += ore;
-                    }
+                    if (dataViaggio >= lunediCorrente && dataViaggio < prossimoLunedi) hSett += ore;
+                    if (dataViaggio >= lunediPrecedente && dataViaggio < prossimoLunedi) hBiSett += ore;
                 }
             });
             
@@ -390,13 +450,9 @@
                 let info = '';
                 if (d.tipo === 'viaggio') {
                     info = d.p;
-                    if (d.tappe && d.tappe.length > 0) {
-                        info += ` -> (${d.tappe.join(' -> ')})`;
-                    }
+                    if (d.tappe && d.tappe.length > 0) info += ` -> (${d.tappe.join(' -> ')})`;
                     info += ` -> ${d.a}`;
-                } else {
-                    info = `${d.l}L`;
-                }
+                } else { info = `${d.l}L`; }
                 let val = d.tipo === 'viaggio' ? (d.trasf || 0) : (d.prezzo || '');
                 return `${d.tipo};${d.data};${info};${val}`;
             }).join('\r\n');
