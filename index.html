@@ -72,6 +72,11 @@
                     <div class="col"><label>Partenza</label><input type="text" id="partenza" placeholder="Es. Milano"></div>
                     <div class="col"><label>Arrivo Finale</label><input type="text" id="arrivo" placeholder="Es. Roma"></div>
                 </div>
+
+                <div class="row">
+                    <div class="col"><label>Ora Inizio</label><input type="time" id="ora_inizio" value="00:00"></div>
+                    <div class="col"><label>Ora Fine</label><input type="time" id="ora_fine" value="00:00"></div>
+                </div>
                 
                 <div id="tappe-container"></div>
                 <button type="button" class="btn-add-tappa" onclick="aggiungiTappaField()">➕ Aggiungi Tappa Intermedia</button>
@@ -257,6 +262,7 @@
             document.getElementById('partenza').value = ''; document.getElementById('arrivo').value = '';
             document.getElementById('tappe-container').innerHTML = ''; document.getElementById('km_p').value = '';
             document.getElementById('km_a').value = ''; document.getElementById('h_guida').value = '00:00';
+            document.getElementById('ora_inizio').value = '00:00'; document.getElementById('ora_fine').value = '00:00';
             document.getElementById('trasferta').value = ''; document.getElementById('note').value = '';
             document.getElementById('data_v').valueAsDate = new Date();
             
@@ -281,6 +287,8 @@
                     dati[index].data = dataViaggio;
                     dati[index].p = document.getElementById('partenza').value;
                     dati[index].a = document.getElementById('arrivo').value;
+                    dati[index].ora_inizio = document.getElementById('ora_inizio').value || "00:00";
+                    dati[index].ora_fine = document.getElementById('ora_fine').value || "00:00";
                     dati[index].tappe = tappeElenco;
                     dati[index].km_p = parseFloat(document.getElementById('km_p').value)||0;
                     dati[index].km_a = parseFloat(document.getElementById('km_a').value)||0;
@@ -294,6 +302,8 @@
                 let v = { 
                     tipo: 'viaggio', data: dataViaggio, 
                     p: document.getElementById('partenza').value, a: document.getElementById('arrivo').value, 
+                    ora_inizio: document.getElementById('ora_inizio').value || "00:00",
+                    ora_fine: document.getElementById('ora_fine').value || "00:00",
                     tappe: tappeElenco, km_p: parseFloat(document.getElementById('km_p').value)||0, 
                     km_a: parseFloat(document.getElementById('km_a').value)||0, 
                     h_guida: document.getElementById('h_guida').value || "00:00", 
@@ -356,9 +366,11 @@
                 if(d.tipo === 'viaggio') {
                     totTrasferte += (d.trasf || 0);
                     let tappeStr = d.tappe && d.tappe.length > 0 ? ` <br><small style="color:var(--text-muted)">📍 Tappe: ${d.tappe.join(' ➔ ')}</small>` : "";
+                    // Mostra l'orario nel registro se disponibile
+                    let orariStr = (d.ora_inizio && d.ora_fine) ? ` <span style="color:var(--text-muted); font-size:0.9em;">⏱️ ${d.ora_inizio}-${d.ora_fine}</span>` : "";
                     viaggiHtml += `
                         <div class="entry">
-                            <b>${d.data}</b>: ${d.p} ➔ ${d.a} | Guida: ${d.h_guida} | <b>€${d.trasf}</b>${tappeStr}
+                            <b>${d.data}</b>${orariStr}: ${d.p} ➔ ${d.a} | Guida: ${d.h_guida} | <b>€${d.trasf}</b>${tappeStr}
                             <div style="margin-top:5px; display:flex; gap:5px;">
                                 <button onclick="avviaModifica(${d.timestamp})" style="width:auto; margin:0; padding:5px 10px; font-size:0.8em; background-color:#0284c7; color:white;">✏️ Modifica</button>
                                 <button onclick="eliminaElemento(${d.timestamp})" style="width:auto; margin:0; padding:5px 10px; font-size:0.8em; background-color:var(--danger); color:white;">❌ Elimina</button>
@@ -389,6 +401,9 @@
             document.getElementById('data_v').value = v.data;
             document.getElementById('partenza').value = v.p;
             document.getElementById('arrivo').value = v.a;
+            // Carica i valori temporali nei nuovi input in fase di modifica
+            document.getElementById('ora_inizio').value = v.ora_inizio || "00:00";
+            document.getElementById('ora_fine').value = v.ora_fine || "00:00";
             document.getElementById('km_p').value = v.km_p;
             document.getElementById('km_a').value = v.km_a;
             document.getElementById('h_guida').value = v.h_guida;
@@ -414,7 +429,6 @@
             }
         }
 
-        // Funzioni Helper per gestire i tempi in formato stringa "Ore:Minuti" e convertirli in calcoli
         function timeToDecimal(timeStr) {
             if (!timeStr || !timeStr.includes(':')) return 0;
             let [h, m] = timeStr.split(':').map(Number);
@@ -430,7 +444,6 @@
         function calcolaTachigrafo() {
             let dati = JSON.parse(localStorage.getItem('logiroad_dati')) || [];
             
-            // Lettura calibrazione ore libera (senza vincolo di 24 ore)
             let calib_h = parseInt(localStorage.getItem('logiroad_calib_h'), 10) || 0;
             let calib_m = parseInt(localStorage.getItem('logiroad_calib_m'), 10) || 0;
             document.getElementById('calib_ore_h').value = calib_h || '';
@@ -479,7 +492,9 @@
                 if(d.tipo === 'viaggio') {
                     let percorso = d.p + " a " + d.a;
                     if(d.tappe && d.tappe.length > 0) percorso += " via " + d.tappe.join('-');
-                    csv += `Tratta;${d.data};${percorso};Guida: ${d.h_guida} - Trasferta: €${d.trasf}\r\n`;
+                    // Esporta gli orari anche nel file CSV Excel
+                    let infoOrari = (d.ora_inizio && d.ora_fine) ? ` (${d.ora_inizio}-${d.ora_fine})` : "";
+                    csv += `Tratta;${d.data};${percorso}${infoOrari};Guida: ${d.h_guida} - Trasferta: €${d.trasf}\r\n`;
                 } else {
                     csv += `Rifornimento;${d.data};Km totali: ${d.km};Litri: ${d.l}L\r\n`;
                 }
